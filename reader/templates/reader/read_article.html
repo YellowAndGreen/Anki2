@@ -1,0 +1,23 @@
+{% extends "reader/base.html" %}
+{% load static %}
+
+{% block title %}News{% endblock %}
+
+
+{% block Reader %}active{% endblock %}
+
+{% block content %}
+<div class="card" style="">
+  <div class="card-body p-8">
+    <p class="card-title h3 text-primary">{{ title }}</p>
+
+    <p class="card-text">    &nbsp&nbsp&nbsp&nbsp&nbsp&nbsp{{ content | linebreaksbr}}</p>
+
+  </div>
+</div>
+
+
+{% endblock %}
+
+
+

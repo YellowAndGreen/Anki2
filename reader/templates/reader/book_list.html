@@ -1,0 +1,48 @@
+{% extends "reader/base.html" %}
+{% load static %}
+
+{% block title %}Reader{% endblock %}
+
+
+{% block Reader %}active{% endblock %}
+
+{% block content %}
+    <div class="mt-2">
+
+    </div>
+
+    <div class="row justify-content-center">
+        {% for article in books %}
+
+            <div class="card col-md-1 m-2 col-lg-3" aria-hidden="true" >
+
+                    <img src="{% static 'img/books/cover.jpg' %}" class="card-img-top placeholder-glow" alt="..." onclick="location.href='{% url 'reader:book_detail' article.id%}'">
+
+                <div class="card-body">
+                    <a class="card-title h5"
+                       href="{% url 'reader:book_detail' article.id %}">{{ article.title| truncatewords:10 }}</a>
+                    <p class="card-text">blablabla</p>
+                </div>
+            </div>
+
+        {% endfor %}
+    </div>
+
+    <nav class="mt-2" aria-label="Page navigation example">
+        <ul class="pagination justify-content-center">
+            <li class="page-item {% if books.has_previous %}{% else %}disabled{% endif %}">
+                <a class="page-link" href="?page={% if books.has_previous %}{{ books.previous_page_number }}{% else %}{{ books.number }}{% endif %}">Previous</a>
+            </li>
+            {% for page_num in books.paginator.page_range %}
+                <li class="page-item {% if  books.number  == page_num %}disabled{% endif %}"><a class="page-link" href="?page={{ page_num }}" >{{ page_num }}</a></li>
+            {% endfor %}
+            <li class="page-item {% if books.has_next %}{% else %}disabled{% endif %}" >
+                <a class="page-link " href="?page={% if books.has_next %}{{ books.next_page_number }}{% else %}{{ books.number }}{% endif %}">Next</a>
+            </li>
+        </ul>
+    </nav>
+
+{% endblock %}
+
+
+

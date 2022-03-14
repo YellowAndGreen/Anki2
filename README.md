@@ -1,2 +1,2 @@
-# Anki2
-a card-based review tools
+# Anki
+card review tools
