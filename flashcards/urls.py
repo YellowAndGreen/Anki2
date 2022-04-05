@@ -30,4 +30,5 @@ urlpatterns = [
     path('export_card_as_txt/', export_card_as_txt, name='export_card_as_txt'),
     path('export_db/', export_db, name='export_db'),
     path('card_recitedata_view/<int:card_id>/', card_recitedata_view, name='card_recitedata_view'),
+    path('dict_query_get/<slug:query_word>/', dict_query_get, name='dict_query_get'),
 ]

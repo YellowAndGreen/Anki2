@@ -9,7 +9,8 @@ https://docs.djangoproject.com/en/3.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/3.0/ref/settings/
 """
-
+CORS_ALLOW_CREDENTIALS = True
+CORS_ORIGIN_ALLOW_ALL = True
 import os
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -129,7 +130,9 @@ LOGOUT_URL = 'account:logout'
 # 定时任务
 CRONJOBS = [('55 23 * * *', 'flashcards.crontab.update_due'),
             ('1 0 * * *', 'flashcards.crontab.update_due_list'),
+            ('1 10 * * *', 'flashcards.crontab.update_article'),
             ]
+
 
 # 日志
 LOGGING = {

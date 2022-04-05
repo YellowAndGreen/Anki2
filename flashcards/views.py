@@ -7,11 +7,13 @@ from datetime import timedelta, datetime
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
+from django.core.cache import cache
 from django.db.models import Q
 from django.http import JsonResponse, FileResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
 # Create your views here.
+from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.http import require_POST
 from django.views.generic.detail import DetailView
 from django.views.generic.list import ListView
@@ -21,8 +23,20 @@ from flashcards.utils import find_example_from_database
 from .crontab import update_due_list
 from .forms import *
 from .models import *
-from .web_query import find_synonym
 from .utils import to_chinese
+from .web_query import find_synonym
+
+
+# 启动时执行的函数
+def onstart():
+    coca = {}
+    # 将coca存入内存中
+    with open('flashcards/static/dict/coca.txt', 'r', encoding='utf-8') as f:
+        coca = json.loads(f.read())
+    cache.set('coca', coca, timeout=None)
+
+
+onstart()
 
 
 class CardListView(ListView):
@@ -479,9 +493,9 @@ def word_add(request):
         cd = request.POST
         word.group = cd['group']
         word.question = cd['question']
-        word.answer = cd['answer']
-        word.example = cd['example']
-        word.translation = cd['translation']
+        word.answer = cd['answer'].replace('；', '，')
+        word.example = cd['example'].replace('\n', ' ').replace('"', '')
+        word.translation = cd['translation'].replace('\n', ' ')
         word.extra = cd['extra']
         if cd['tag'] != '':
             word.tags.add(cd['tag'])
@@ -490,9 +504,9 @@ def word_add(request):
             # 检查setting中数值是否大于等于50，若大于50，则group加1,数量初始化为1，最后保存set
             if set_group['max_word_num'] >= 50:
                 set_group['max_word_group'] += 1
-                # 转化为最大group并转为中文
-                word.group = ''.join(['词汇-第', to_chinese(set_group['max_word_group']), '组'])
                 set_group['max_word_num'] = 0
+            # 转化为最大group并转为中文
+            word.group = ''.join(['词汇-第', to_chinese(set_group['max_word_group']), '组'])
             # 最后num数加一
             set_group['max_word_num'] += 1
             set.current_group = json.dumps(set_group)
@@ -548,8 +562,30 @@ def dict_query(request):
     for query_list_word in query_list:
         query_result = Dict.objects.filter(headword__startswith=query_list_word)
         if len(query_result) != 0:
-            return JsonResponse({"query_word": query_word, 'html_result': query_result[0].item})
+            # 查询缓存中的COCA
+            rank = cache.get('coca', default=-1).get(query_result[0].headword, -1)
+            return JsonResponse(
+                {"query_word": query_result[0].headword, 'html_result': query_result[0].item, 'rank': rank})
 
+    return JsonResponse({"query_word": query_word, 'html_result': 'No Result!'})
+
+
+# get方式的字典请求
+@xframe_options_exempt
+def dict_query_get(request, query_word):
+    re_filter = re.findall(r"[a-zA-Z]+", query_word)
+    if len(re_filter) == 0:
+        return JsonResponse({"query_word": request.POST.get('query_word'), 'html_result': 'No Match!'})
+    query_word = re_filter[0]
+    # print(query_word)
+
+    # 备选列表
+    query_list = [query_word, query_word.lower(), query_word[0:-1], query_word[0:-2], query_word[0:-3]]
+    for query_list_word in query_list:
+        query_result = Dict.objects.filter(headword__startswith=query_list_word)
+        if len(query_result) != 0:
+            # return JsonResponse({"query_word": query_list_word, 'html_result': query_result[0].item})
+            return render(request, 'flashcards/anki_ext.html', {"query_word": query_word, 'html_result': 'No Result!'})
     return JsonResponse({"query_word": query_word, 'html_result': 'No Result!'})
 
 
@@ -584,12 +620,13 @@ def export_card_as_txt(request):
     try:
         with open("export.txt", 'w', encoding="utf-8") as f:
             for card in cards:
+                card.answer = card.answer.replace('\n', '<br>')
                 f.write(
                     f"{card.group}\t{card.question}\t{card.answer}\t{card.example}\t{card.translation}\t{card.extra}\n")
         messages.success(request, f'导出成功，共导出{len(cards)}张卡片')
 
         return FileResponse(open('export.txt', 'rb'), as_attachment=True)
-    except Exception:
+    except Exception as e:
         messages.error(request, '导出失败')
         return redirect('flashcards:settings_view')
 

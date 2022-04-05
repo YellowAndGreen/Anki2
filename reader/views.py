@@ -11,8 +11,7 @@ def article_detailview(request, article_id):
     article = get_object_or_404(Article, id=article_id)
     return render(request,
                   'reader/read_article.html',
-                  {'title': article.title,
-                   'content': article.content
+                  {'article': article
                    })
 
 
@@ -37,39 +36,46 @@ def article_list(request):
 
 
 def update_article(request):
-    url = 'https://www.cnn.com/'
+    urls = ['https://www.cnbc.com/', 'https://thenextweb.com/', 'https://www.cnn.com/', 'https://www.wired.com/']
+    # 若是主动提交且含有地址，则只要这个url
     if 'url' in request.POST and request.POST['url'][0:4] == 'http':
-        url = request.POST['url']
-    cnn = newspaper.build(url, languange='en', memoize_articles=False)
-    print(f"开始，共有{len(cnn.articles)}篇文章")
+        urls = [request.POST['url']]
     count_num = 0
-    # 增加一篇文章，删除一篇id最前的文章
-    id_article = Article.objects.all()[0].id
-    for article in cnn.articles:
-        try:
-            article.download()
-            article.parse()
-        except Exception as e:
-            print(e)
-            continue
-        if article.text == "" or article.title == "" or len(article.text) < 2000:
-            print(f'太短！只有{len(article.text)}字符')
-            continue
-        else:
+    # 删除所有新闻，更新100篇新闻
+    Article.objects.all().delete()
+    # 循环urls列表，直到50篇新闻
+    for url in urls:
+        cnn = newspaper.build(urls[0], languange='en', memoize_articles=False)
+        with open('./log.txt', 'a') as f:
+            f.write(f"开始更新文章,来自{url}，共有{len(cnn.articles)}篇文章\n")
+        for article in cnn.articles:
+            try:
+                article.download()
+                article.parse()
+            except Exception as e:
+                with open('./log.txt', 'a') as f:
+                    f.write(f'{e}\n')
+                continue
+            if article.text == "" or article.title == "" or len(article.text.strip()) < 2000:
+                with open('./log.txt', 'a') as f:
+                    f.write(f'太短！只有{len(article.text)}字符\n')
+                continue
+            else:
+                count_num += 1
+                with open('./log.txt', 'a') as f:
+                    f.write(f'成功导入第{count_num}/100个，有{len(article.text)}个字符\n')
+                art_model = Article(title=article.title, content=article.text)
+                if article.top_image != '':
+                    art_model.top_image_url = article.top_image
+                art_model.save()
 
-            count_num += 1
-            print(f'{count_num}/100，有{len(article.text)}个字符')
-            art_model = Article(title=article.title, content=article.text)
-            if article.top_image != '':
-                art_model.top_image_url = article.top_image
-            art_model.save()
-            get_object_or_404(Article, id=id_article).delete()
-            id_article += 1
+                if count_num == 100:
+                    with open('./log.txt', 'a') as f:
+                        f.write('全部导入!\n')
+                    break
+        if count_num == 100:
+            break
 
-            if count_num == 100:
-                print('大功告成')
-                break
-    print(f"更新{count_num}篇文章")
     messages.success(request, f"更新{count_num}篇文章")
     return JsonResponse({'status': 'ok'})
 

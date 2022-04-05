@@ -44,6 +44,14 @@
           user-select: text;
         }
 
+        #audio_img {
+            width:17px;
+            height:17px;
+        }
+
+        #audio_button {
+            cursor: pointer;
+        }
     </style>
   </head>
   <body>
@@ -104,13 +112,21 @@
                  aria-atomic="true" style="width: 100%;height: 100%;">
                 <div class="toast-header">
 
-                    <strong class="me-auto query_word"></strong>剑桥高阶
-                    <a class="ms-auto" href="#EditCard" data-bs-toggle="offcanvas" role="button"
+                    <strong class="me-auto query_word">剑桥高阶 <span class="ms-2" id = 'rank'></span></strong>
+                    <div id="audio_button">
+                        <strong id="audio_text"></strong>
+                        <img id="audio_img" alt="..." src="{% static '/img/sound.png' %}">
+                    </div>
+                    <div class="ms-auto">
+                    <a class="me-2" id="SearchWordBank" target="_blank">查词库</a>
+                    <a class="" href="#EditCard" data-bs-toggle="offcanvas" role="button"
                    aria-controls="EditCard" id="AddWordButton">添加单词</a>
+                    </div>
                     <button type="button" class="btn-close toast-window-close" data-bs-dismiss="toast"
                             aria-label="Close"></button>
                 </div>
                 <div class="toast-body" style="height: 90%;overflow: auto">
+
                     <div class=" query_word_result "></div>
                 </div>
             </div>
@@ -168,6 +184,11 @@
                     <label for="floatingInput4">translation</label>
                 </div>
 
+
+
+                <button  class="btn btn-outline-primary" id="word_add_submit">Submit!</button>
+
+                {% csrf_token %}
                 <div class="form-floating mb-3 mt-3">
 
                     <input type="text" class="form-control" id="floatingInput5" placeholder="" name="extra"
@@ -180,11 +201,6 @@
                     <input type="text" class="form-control" id="floatingInput6" placeholder="" name="tag">
                     <label for="floatingInput6">Add Tag</label>
                 </div>
-
-                <button  class="btn btn-outline-primary" id="word_add_submit">Submit!</button>
-
-                {% csrf_token %}
-
             </div>
             <select class="form-select mt-2 mb-2" id="example_select" aria-label="Default select example">
                 <option selected>选择例句</option>
@@ -194,6 +210,8 @@
 
         </div>
     </div>
+    <!-- 音频 -->
+    <audio autoplay id="audio"></audio>
     <!-- 底部栏 -->
     <div class="container-fluid" id="footer">
     <footer class="container-fluid text-center" >
@@ -222,27 +240,26 @@
     });
 
     $(document).ready(function(){
-{% block domready %}
-
 //字典及弹窗
 var toastTrigger = document.getElementById('liveToastBtn')
 var toastLiveExample = document.getElementById('liveToast')
 var exampleInText = ''
-
+var data_query_word
 
 
 function getWord(e){
   var word = window.getSelection?    window.getSelection():    document.selection.createRange().text
   if (word.toString()!=="") {
     //若选中的不是英文则结束函数
-    if (word.toString().match('[\u4e00-\u9fa5]') !== null||e.target.nodeName === 'INPUT') {
+    //在单词添加输入框内选中也结束函数
+    if (word.toString().match('[\u4e00-\u9fa5]') !== null||e.target.nodeName === 'INPUT'||e.target.nodeName === 'TEXTAREA') {
         return
     }
     /*
     word.getRangeAt(0).commonAncestorContainer.textContent获取点击块的文本
     以.分割，通过filter函数找到有对应词的句子，最后加上.
      */
-    exampleInText = word.getRangeAt(0).commonAncestorContainer.textContent.split('.').filter((ele)=>{return ele.indexOf(word.toString())>=0})+'.'
+    exampleInText = word.getRangeAt(0).commonAncestorContainer.textContent.split(/[.;]/).filter((ele)=>{return ele.indexOf(word.toString())>=0})+'.'
 
 
     $.post('{% url "flashcards:dict_query" %}',
@@ -254,11 +271,18 @@ function getWord(e){
       var toast = new bootstrap.Toast(toastLiveExample)
       toast.show()
       $(".toast-window").css("display",'inline')
-      $("#floatingInput1").val(data["query_word"])
+      data_query_word = data["query_word"]
+      $("#floatingInput1").val(data_query_word)
+      $('#audio_text').text(data_query_word)
       window.getSelection().empty();
+      //词汇rank值
+      $("#rank").text("RANK:"+data["rank"])
+      //查词库的链接
+      $('#SearchWordBank').attr('href',"{% url "flashcards:search"%}" + "?query=" + data_query_word)
     }
   );
     $('#floatingInput3').val(exampleInText)
+
     //在此处可能会占用更多资源，在点开添加单词时再使用
     //translate(exampleInText)
   }
@@ -271,10 +295,7 @@ $(".toast-window-close").click(function(){
 
 
 $("body").on("click",function(e){
-    //console.log(e.target.className!==' query_word_result ')
-    //console.log(e.target.nodeName)
     getWord(e);
-    //window.getSelection().empty();
 });
 
 $("body").on('click',function (e) {
@@ -297,65 +318,76 @@ $("body").on("touchstart",function(e){
 
 });
 
-//添加表单
-var results
-var meanings
-function getExample(){
-  var word = $("#floatingInput1").val()
-  if (word!=="") {
-    $.post('{% url "flashcards:get_example" %}',
-    {
-      query_word: word
-    },
-    function(data){
-        results = $.parseJSON(data['example'])
-        meanings = $.parseJSON(data['meanings'])
-        console.log(meanings)
-        $('#example_select option').remove()
-        $('#select_word_meaning option').remove()
-        for (var index in results) {
-            $('#example_select').append('<option value='+String(index)+'>'+results[index][0]+'</option>')
-        }
-        if (exampleInText !== '') {
-            $('#example_select').append('<option value=' + String(-1) + '>' + exampleInText + '</option>')
-        }
 
-        for (var index2 in meanings) {
-            $('#select_word_meaning').append('<option value='+String(index2)+'>'+meanings[index2]+'</option>')
-        }
+//添加表单
+function find_example_and_trans() {
+    // 查询的文本
+    let dictHtml = $('.query_word_result').html()
+    // 过滤出例句和翻译
+    let raw_examples = dictHtml.match(/<font color="#008080">.*?<\/font><\/div>/g)
+    // 遍历例句放入两个列表中
+    let examples = []
+    let translations = []
+    let meanings = []
+    raw_examples.map((raw_example)=>{
+        let example_and_tran = raw_example.replace(/(<.*?>|<\/.*?>)/g, "")
+        // 分割英文和中文，以中文第一个字切割
+        let first_chinese = example_and_tran.match(/[\u4e00-\u9fa5]/).index
+        let example = example_and_tran.slice(0,first_chinese)
+        let translation = example_and_tran.slice(first_chinese,)
+        examples.push(example)
+        translations.push(translation)
+    })
+    // 全局匹配不能使用子表达式，所以只有去除外边的部分
+    meanings = dictHtml.match(/<font style="color:navy;margin-left:12pt;" ?>(.*?)<\/font>/g).map((translation)=>translation.replace(/(<.*?>|<\/.*?>)/g, ""))
+    return [examples,translations,meanings]
+}
+let result
+function getExample(){
+    results = find_example_and_trans()
+    //删除之前的选项
+    $('#select_word_meaning option').remove()
+    $('#example_select option').remove()
+    //文章中的例句
+    if (exampleInText !== '') {
+        $('#example_select').append('<option value=' + String(-1) + '>' + exampleInText + '</option>')
     }
-  );
-  }
+    //字典例句
+    for (let index in results[0]) {
+        $('#example_select').append('<option value='+String(index)+'>'+results[0][index]+'</option>')
+    }
+
+    for (let index in results[2]) {
+        $('#select_word_meaning').append('<option value='+String(index)+'>'+results[2][index]+'</option>')
+    }
 }
 
-    function insertExample() {
-        var result_index = $('#example_select option:selected').val()
-        if (result_index >= 0) {
-            $('#floatingInput3').val(results[result_index][0])
-            $('#floatingInput4').val(results[result_index][1])
-        }
-        else {
-            $('#floatingInput3').val(exampleInText)
-            translate(exampleInText)
-        }
+function insertExample() {
+    var result_index = $('#example_select option:selected').val()
+    if (result_index >= 0) {
+        $('#floatingInput3').val(results[0][result_index])
+        $('#floatingInput4').val(results[1][result_index])
     }
-    function insertMeaning() {
-        let meaning = $('#select_word_meaning option:selected').text()
-        let attr = $('#select_word_attr option:selected').text()
-        //此处应为追加，而不是覆盖
-        let current_meaning = $('#floatingInput2').val()
-        //若存在释义，则先换行
-        if (current_meaning!=='') {
-            console.log(current_meaning + '\n' + attr +meaning)
-            $('#floatingInput2').val(current_meaning + '\n' + attr +meaning)
-        }
-        else {
-            $('#floatingInput2').val(attr+meaning)
-        }
+    else {
+        $('#floatingInput3').val(exampleInText)
+        translate(exampleInText)
     }
-$('#find_example').on("click",function(){
-    getExample()
-});
+}
+function insertMeaning() {
+    let meaning = $('#select_word_meaning option:selected').text()
+    let attr = $('#select_word_attr option:selected').text()
+    //此处应为追加，而不是覆盖
+    let current_meaning = $('#floatingInput2').val()
+    //若存在释义，则先换行
+    if (current_meaning!=='') {
+        // console.log(current_meaning + '<br>' + attr +meaning)
+        $('#floatingInput2').val(current_meaning + '\n' + attr +meaning)
+    }
+    else {
+        $('#floatingInput2').val(attr+meaning)
+    }
+}
+
 $('#insert_example').on("click",function(){
     insertExample()
 });
@@ -392,6 +424,7 @@ $('#word_add_submit').on("click",function(){
 });
 
 $('#AddWordButton').on('click',function () {
+    getExample()
     translate(exampleInText)
 })
 
@@ -442,7 +475,12 @@ function truncate(q){
 }
 
 
-
+$('#audio_button').on('click',function () {
+    $('#audio').attr('src','http://dict.youdao.com/dictvoice?audio='+data_query_word)
+    const audio = document.getElementById("audio")
+    audio.play()
+})
+{% block domready %}
 {% endblock %}
     });
   </script>

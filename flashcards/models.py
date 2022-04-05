@@ -74,3 +74,5 @@ class Settings(models.Model):
 class Dict(models.Model):
     headword = models.CharField(max_length=2000, blank=False)
     item = models.CharField(max_length=200000, blank=False)
+    # coca排名
+    coca = models.PositiveIntegerField(blank=False, default=0)

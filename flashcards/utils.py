@@ -49,12 +49,19 @@ def mdx_to_database():
     filename = "flashcards/static/dict/剑桥高阶.mdx"
     headwords = [*MDX(filename)]  # 单词名列表
     items = [*MDX(filename).items()]  # 释义html源码列表
-
+    coca = pd.read_excel('flashcards/static/dict/COCA.xlsx', sheet_name='Sheet1')
+    coca_dict = {}
+    # 将信息一次性保存入字典，后面不需重复遍历
+    for row in coca.iterrows():
+        coca_dict[row[1][' word'].strip()] = row[1]['RANK #']
     for i in range(len(headwords)):
         wordindex = headwords.index(headwords[i])
         word, html = items[wordindex]
         word, html_result = word.decode(), html.decode()
         dic = Dict(headword=word, item=html_result)
+        # 若存在coca字典中，则加入
+        if word.strip() in coca_dict:
+            dic.coca = coca_dict[word.strip()]
         dic.save()
 
 
@@ -115,7 +122,7 @@ def import_to_db():
 
         card = Card(group=val_list[0],
                     question=re.sub(r"(<.*?>|\[.*?\]|&nbsp;)", "", re.sub(r"<div>", "\n", val_list[1])),
-                    answer=val_list[2],
+                    answer=val_list[2].replace('；', '，'),
                     example=example,
                     translation=translation,
                     extra=extra,

@@ -128,6 +128,7 @@ LOGOUT_URL = 'account:logout'
 # 定时任务
 CRONJOBS = [('55 23 * * *', 'flashcards.crontab.update_due'),
             ('1 0 * * *', 'flashcards.crontab.update_due_list'),
+            ('10 0 * * *', 'flashcards.crontab.update_article'),
             ]
 
 # 日志
@@ -155,7 +156,7 @@ LOGGING = {
     },
 }
 
-REDIS_HOST = 'localhost'
-REDIS_PORT = 6360
-REDIS_DB = 0
+# REDIS_HOST = 'localhost'
+# REDIS_PORT = 6360
+# REDIS_DB = 0
 

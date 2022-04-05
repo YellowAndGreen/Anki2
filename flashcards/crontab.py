@@ -1,5 +1,9 @@
 import os
 
+import newspaper
+from django.shortcuts import get_object_or_404
+
+from reader.models import Article
 from .models import Card, WordList
 import datetime
 import json
@@ -44,4 +48,46 @@ def backup_db():
     status = os.system(command)
     if status != 0:
         raise Exception('执行系统命令失败, command=%s, status=%s' % (command, status))
+
+
+def update_article():
+    urls = ['https://www.cnn.com/', 'https://thenextweb.com/', 'https://www.cnbc.com/', 'https://www.wired.com/']
+    # if 'url' in request.POST and request.POST['url'][0:4] == 'http':
+    #     urls = [request.POST['url']]
+    count_num = 0
+    # 删除所有新闻，更新100篇新闻
+    Article.objects.all().delete()
+    # 循环urls列表，直到100篇新闻
+    for url in urls:
+        cnn = newspaper.build(urls[0], languange='en', memoize_articles=False)
+        with open('./log.txt', 'a') as f:
+            f.write(f"开始更新文章,来自{url}，共有{len(cnn.articles)}篇文章\n")
+        for article in cnn.articles:
+            try:
+                article.download()
+                article.parse()
+            except Exception as e:
+                with open('./log.txt', 'a') as f:
+                    f.write(f'{e}\n')
+                continue
+            if article.text == "" or article.title == "" or len(article.text.strip()) < 2000:
+                with open('./log.txt', 'a') as f:
+                    f.write(f'太短！只有{len(article.text)}字符\n')
+                continue
+            else:
+                count_num += 1
+                with open('./log.txt', 'a') as f:
+                    f.write(f'成功导入第{count_num}/100个，有{len(article.text)}个字符\n')
+                art_model = Article(title=article.title, content=article.text)
+                if article.top_image != '':
+                    art_model.top_image_url = article.top_image
+                art_model.save()
+
+                if count_num == 100:
+                    with open('./log.txt', 'a') as f:
+                        f.write('全部导入!\n')
+                    break
+        if count_num == 100:
+            break
+
 

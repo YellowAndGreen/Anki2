@@ -47,7 +47,6 @@
                    aria-controls="EditCard">Edit</a></li>
             <li><a class="dropdown-item" href="{% url 'flashcards:word_delete' object.id %}">Delete</a></li>
             <li><a class="dropdown-item" href="{% url 'flashcards:word_add' %}">Add Word</a></li>
-            <li><a class="dropdown-item" href="{% url 'flashcards:card_recitedata_view' object.id %}">ReData</a></li>
             <li>
                 <form class="ms-3" method="post" action="{% url 'flashcards:settings_view' %}">
                     <div class="form-check form-switch ">
@@ -161,14 +160,14 @@
 
             </h2>
             <div id="flush-collapseOne" class="accordion-collapse collapse" aria-labelledby="flush-headingOne">
-                <div class="accordion-body">{{ object.answer |safe }}</div>
+                <div class="accordion-body">{{ object.answer |safe |linebreaks}}</div>
             </div>
         </div>
         <div class="accordion-item" id="example">
             <h2 class="accordion-header" id="flush-headingTwo">
                 <button id="example_button" class="accordion-button collapsed" type="button" data-bs-toggle="collapse"
                         data-bs-target="#flush-collapseTwo" aria-expanded="false" aria-controls="flush-collapseTwo">
-                    <div>{{ object.example |safe }}</div>
+                    <div>{{ object.example |safe}}</div>
                 </button>
             </h2>
             <div id="flush-collapseTwo" class="accordion-collapse collapse" aria-labelledby="flush-headingTwo">
