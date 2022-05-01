@@ -1,14 +1,13 @@
+import datetime
+import json
+import logging
 import os
 
 import newspaper
-from django.shortcuts import get_object_or_404
+from django.contrib.auth.models import User
 
 from reader.models import Article
 from .models import Card, WordList
-import datetime
-import json
-from django.contrib.auth.models import User
-import logging
 
 
 # 更新到期卡片的due

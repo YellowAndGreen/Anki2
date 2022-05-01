@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'taggit',
     'todo.apps.TodoConfig',
     'django_crontab',
-    'reader.apps.ReaderConfig'
+    'reader.apps.ReaderConfig',
 ]
 
 MIDDLEWARE = [
@@ -53,6 +53,11 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+# 允许跨域
+# CORS_ALLOWED_ORIGINS = [
+#     "http://localhost:8080",
+#     "http://127.0.0.1:8080",
+# ]
 
 ROOT_URLCONF = 'Anki.urls'
 

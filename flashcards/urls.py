@@ -4,16 +4,27 @@ from flashcards.views import *
 
 app_name = 'flashcards'
 urlpatterns = [
+    # 主页
     path('', index, name='dashboard'),
-    # path('<slug:category_slug>/', views.product_list, name="product_list_by_category"),
+    # 单张卡片浏览
     path('<int:card_id>', card_detailview, name='card_detail'),
+    # 下一张卡片
     path('next/', nextcardview, name='next'),
+    # 背诵卡片
     path("recite/<int:card_id>/<int:rank>", cardreciteview, name="recite"),
+    # 展示背诵数据
     path("recitedata/", recitedatadisplay, name="display"),
-    path('search/', search, name='search'),
+    # 展示单张卡片背诵数据
+    path('card_recitedata_view/<int:card_id>/', card_recitedata_view, name='card_recitedata_view'),
+    # 撤回：删除背诵数据
     path('undo/<int:card_id>', undo, name='undo'),
+    # 列表的撤回：删除背诵记录
     path('undo_list/<int:list_id>/<int:progress>/', undo_list, name='undo_list'),
+    # 查询某个单词
+    path('search/', search, name='search'),
+    # 网络搜索
     path('websearch/', websearch, name='websearch'),
+    # 字典界面
     path('dict/', dict_search, name='dict'),
     path('create_wordlist_by_diff/', create_wordlist_by_diff, name='create_wordlist_by_diff'),
     path('create_wordlist_by_tag/', create_wordlist_by_tag, name='create_wordlist_by_tag'),
@@ -29,6 +40,6 @@ urlpatterns = [
     path('get_example/', get_example, name='get_example'),
     path('export_card_as_txt/', export_card_as_txt, name='export_card_as_txt'),
     path('export_db/', export_db, name='export_db'),
-    path('card_recitedata_view/<int:card_id>/', card_recitedata_view, name='card_recitedata_view'),
+
     path('dict_query_get/<slug:query_word>/', dict_query_get, name='dict_query_get'),
 ]

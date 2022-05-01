@@ -7,108 +7,7 @@
 
   function bookmarklet(msg) {
     // 添加单词查询弹出窗
-    let box_html = '        <!-- 单词查询弹出窗 -->\n' +
-        '        <div class="position-fixed top-0 start-50 translate-middle-x col-10 toast-window"\n' +
-        '             style="z-index: 11; height: 90%;display: none">\n' +
-        '            <div id="liveToast" class="toast col-12 p-3" data-bs-autohide=false role="alert" aria-live="assertive"\n' +
-        '                 aria-atomic="true" style="width: 100%;height: 100%;">\n' +
-        '                <div class="toast-header">\n' +
-        '\n' +
-        '                    <strong class="me-auto query_word">剑桥高阶</strong>\n' +
-        '                    <div id="audio_button">\n' +
-        '                        <strong id="audio_text"></strong>\n' +
-        '                        <img id="audio_img" alt="..." src="{% static \'/img/sound.png\' %}">\n' +
-        '                    </div>\n' +
-        '                    <a class="ms-auto" href="#EditCard" data-bs-toggle="offcanvas" role="button"\n' +
-        '                   aria-controls="EditCard" id="AddWordButton">添加单词</a>\n' +
-        '                    <button type="button" class="btn-close toast-window-close" data-bs-dismiss="toast"\n' +
-        '                            aria-label="Close"></button>\n' +
-        '                </div>\n' +
-        '                <div class="toast-body" style="height: 90%;overflow: auto">\n' +
-        '\n' +
-        '                    <div class=" query_word_result "></div>\n' +
-        '                </div>\n' +
-        '            </div>\n' +
-        '        </div>\n' +
-        '    </div>\n' +
-        '        <!--编辑单词表单-->\n' +
-        '    <div class="offcanvas offcanvas-start " tabindex="-1" id="EditCard" aria-labelledby="EditCardLabel" style="width:50%">\n' +
-        '        <div class="offcanvas-header">\n' +
-        '            <h5 class="offcanvas-title" id="EditCardLabel">编辑单词</h5>\n' +
-        '\n' +
-        '            <button type="button" class="btn-close text-reset" id="close_add_word" data-bs-dismiss="offcanvas" aria-label="Close"></button>\n' +
-        '        </div>\n' +
-        '        <div class="offcanvas-body">\n' +
-        '            <div id=\'form1\' class="align-items-center col-12 ">\n' +
-        '                <div class="form-floating mb-3 mt-3">\n' +
-        '\n' +
-        '                    <input type="text" class="form-control" id="floatingInput0" placeholder="" name="group"\n' +
-        '                           value="">\n' +
-        '                    <label for="floatingInput0">group</label>\n' +
-        '                </div>\n' +
-        '                <div class="form-floating mb-1 mt-3">\n' +
-        '                    <input type="text" class="form-control" id="floatingInput1" placeholder="" name="question"\n' +
-        '                           value="">\n' +
-        '                    <label for="floatingInput1">question</label>\n' +
-        '                </div>\n' +
-        '                <div>\n' +
-        '                    <select class="form-select-sm mt-0 mb-2 " id="select_word_attr" aria-label="Default select example">\n' +
-        '                        <option selected>v. </option>\n' +
-        '                        <option selected>n. </option>\n' +
-        '                        <option selected>adj. </option>\n' +
-        '                        <option selected>adv. </option>\n' +
-        '                    </select>\n' +
-        '                    <select class="form-select-sm mt-2 mb-2 " id="select_word_meaning"\n' +
-        '                            aria-label="Default select example">\n' +
-        '                        <option selected>选择释义</option>\n' +
-        '                    </select>\n' +
-        '                    <button type="submit" class="btn-sm btn-outline-primary" id="find_example">获取释义</button>\n' +
-        '                    <button type="submit" class="btn-sm btn-outline-primary" id="insert_attr_meaning">填入</button>\n' +
-        '                </div>\n' +
-        '                <div class="form-floating mb-3 mt-1">\n' +
-        '\n' +
-        '                    <textarea type="text" class="form-control" id="floatingInput2" placeholder="" name="answer"></textarea>\n' +
-        '                    <label for="floatingInput2">answer</label>\n' +
-        '                </div>\n' +
-        '\n' +
-        '                <div class="form-floating mb-3 mt-3">\n' +
-        '\n' +
-        '                    <textarea type="text" class="form-control" id="floatingInput3" placeholder="" name="example" style="height: 150px"></textarea>\n' +
-        '                    <label for="floatingInput3">example</label>\n' +
-        '                </div>\n' +
-        '\n' +
-        '                <div class="form-floating mb-3 mt-3">\n' +
-        '\n' +
-        '                    <textarea type="text" class="form-control" id="floatingInput4" placeholder="" name="translation" style="height: 150px"></textarea>\n' +
-        '                    <label for="floatingInput4">translation</label>\n' +
-        '                </div>\n' +
-        '\n' +
-        '\n' +
-        '\n' +
-        '                <button  class="btn btn-outline-primary" id="word_add_submit">Submit!</button>\n' +
-        '\n' +
-        '                {% csrf_token %}\n' +
-        '                <div class="form-floating mb-3 mt-3">\n' +
-        '\n' +
-        '                    <input type="text" class="form-control" id="floatingInput5" placeholder="" name="extra"\n' +
-        '                           value="">\n' +
-        '                    <label for="floatingInput5">extra</label>\n' +
-        '                </div>\n' +
-        '\n' +
-        '                <div class="form-floating mb-3 mt-3">\n' +
-        '\n' +
-        '                    <input type="text" class="form-control" id="floatingInput6" placeholder="" name="tag">\n' +
-        '                    <label for="floatingInput6">Add Tag</label>\n' +
-        '                </div>\n' +
-        '            </div>\n' +
-        '            <select class="form-select mt-2 mb-2" id="example_select" aria-label="Default select example">\n' +
-        '                <option selected>选择例句</option>\n' +
-        '            </select>\n' +
-        '\n' +
-        '            <button type="submit" class="btn btn-outline-primary" id="insert_example">填入</button>\n' +
-        '\n' +
-        '        </div>\n' +
-        '    </div>';
+    let box_html = '<div id="result"></div>>';
     jQuery('body').append(box_html);
   }
 
@@ -123,7 +22,6 @@
     let scripts = ['https://cdn.bootcdn.net/ajax/libs/jquery/3.6.0/jquery.min.js',
       'https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.1.3/scss/_accordion.scss',
       'https://cdn.bootcdn.net/ajax/libs/popper.js/2.11.4/cjs/popper.min.js',
-      'https://cdn.bootcdn.net/ajax/libs/js-cookie/3.0.1/js.cookie.min.js',
       'https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/5.1.3/js/bootstrap.min.js',
       'https://cdn.bootcdn.net/ajax/libs/crypto-js/4.1.1/crypto-js.js'
     ]
@@ -155,19 +53,7 @@
   }
 })()
 
-//ajax准备
-var csrftoken = Cookies.get('csrftoken');
-function csrfSafeMethod(method) {
-  // these HTTP methods do not require CSRF protection
-  return (/^(GET|HEAD|OPTIONS|TRACE)$/.test(method));
-}
-$.ajaxSetup({
-  beforeSend: function(xhr, settings) {
-    if (!csrfSafeMethod(settings.type) && !this.crossDomain) {
-      xhr.setRequestHeader("X-CSRFToken", csrftoken);
-    }
-  }
-});
+
 
 
 //字典及弹窗
@@ -192,7 +78,7 @@ function getWord(e){
     exampleInText = word.getRangeAt(0).commonAncestorContainer.textContent.split(/[.;]/).filter((ele)=>{return ele.indexOf(word.toString())>=0})+'.'
 
 
-    $.get('http://127.0.0.1"8000/flashcards/dict_query_get/'+word.toString(),
+    $.get('http://127.0.0.1:8000/flashcards/dict_query_get/'+word.toString(),
     function(data){
       $(".query_word_result").html(data["html_result"])
       var toast = new bootstrap.Toast(toastLiveExample)
@@ -421,8 +307,3 @@ $('#audio_button').on('click',function () {
 //     }
 // });
 
-let iframe = document.createElement('iframe');
-iframe.src = "http://127.0.0.1:8000/flashcards/dict_query_get/find/"
-iframe.height="50%"
-iframe.width="50%"
-jQuery('body').append(iframe)

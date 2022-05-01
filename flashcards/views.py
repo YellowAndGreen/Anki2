@@ -6,17 +6,12 @@ from datetime import timedelta, datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.core.cache import cache
 from django.db.models import Q
 from django.http import JsonResponse, FileResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.utils import timezone
-# Create your views here.
-from django.views.decorators.clickjacking import xframe_options_exempt
 from django.views.decorators.http import require_POST
-from django.views.generic.detail import DetailView
-from django.views.generic.list import ListView
 from taggit.models import Tag
 
 from flashcards.utils import find_example_from_database
@@ -39,22 +34,46 @@ def onstart():
 onstart()
 
 
-class CardListView(ListView):
-    model = Card
-    template_name = 'flashcards/list.html'
+# 首页
+@login_required
+def index(request):
+    card_num = Card.objects.count()
+    # 获取当前用户的单词列表
+    wordlists = request.user.owner.all()
+    # 获取过去七天的背诵数据
+    now = timezone.now()
+    # 七天前作为开始时间
+    start = now - timedelta(days=7, hours=now.hour, minutes=now.minute, seconds=now.second)
+    # 找到过去七天的背诵数据
+    recitedata = Recitedata.objects.filter(date__gt=start)
+    rank_count_by_day = []
+    for i in range(1, 8):
+        all_data = recitedata.filter(date__gt=start + timedelta(days=i), date__lt=start + timedelta(days=i + 1))
+        counter = collections.Counter([data.rank for data in all_data])
+        rank_count_by_day.append([counter[1], counter[2], counter[3], counter[4]])
+    rank_count_by_rank = []
+    for i in range(0, 4):
+        rank_count_by_rank.append([rank_day[i] for rank_day in rank_count_by_day])
+    # 仅返回有单词的tag
+    tags = filter(lambda tag: len(Card.objects.filter(tags__in=[tag])), Tag.objects.all())
+    return render(request, 'flashcards/anki.html',
+                  {'len': card_num,
+                   'lenlist': len(wordlists),
+                   'wordlists': wordlists,
+                   'tags': tags,
+                   'recitedata': rank_count_by_rank,
+                   })
 
 
-class CardDetailView(LoginRequiredMixin, DetailView):
-    model = Card
-    template_name = 'flashcards/card_detail.html'
-
-
-# card_detail函数版
+# 单张卡片浏览
 def card_detailview(request, card_id):
-    # 获取当前设置
-    settings = request.user.settings.all()[0]
+    # 从缓存中获取当前设置，若无则从数据库读取并存入缓存
+    random_example = request.user.settings.all()[0] if cache.get('random_example') is None else cache.get(
+        'random_example')
+
     # 获取card实例
     card = get_object_or_404(Card, id=card_id)
+    # 若当前设置为随机例句且是该卡片属于词汇分组
     if request.user.settings.all()[0].random_example and card.group[0:2] == "词汇":
         result = find_example_from_database(card.question)
         # 有可能查不到
@@ -70,18 +89,16 @@ def card_detailview(request, card_id):
                   'flashcards/card_detail.html',
                   {'object': card,
                    'tags': card.tags.all(),
-                   'random_example': settings.random_example
+                   'random_example': random_example
                    })
 
 
-# 单张card数据
-def card_recitedata_view(request, card_id):
-    card = get_object_or_404(Card, id=card_id)
-    all_recitedata = card.recitedata.all()
-    return render(request,
-                  'flashcards/card_recitedata_detail.html',
-                  {'all_recitedata': all_recitedata
-                   })
+# 下一张卡片
+@login_required
+def nextcardview(request):
+    # 有待改进，随机卡片操作十分耗时
+    card = Card.objects.all()[random.randrange(1, Card.objects.count(), 1)]
+    return redirect(card.get_absolute_url())
 
 
 # 背诵
@@ -89,23 +106,15 @@ def card_recitedata_view(request, card_id):
 def cardreciteview(request, card_id, rank):
     # 获取card实例
     card = get_object_or_404(Card, id=card_id)
-
-    # 创建并保存
+    # 创建记忆数据并保存
     recitedata = Recitedata(rank=rank, card=card)
     recitedata.save()
     # 生成随机数并跳转至下一卡片
-    card = Card.objects.all()[random.randrange(1, len(Card.objects.all()), 1)]
+    card = Card.objects.all()[random.randrange(1, Card.objects.count(), 1)]
     return redirect(card.get_absolute_url())
 
 
-# 下一张卡片
-@login_required
-def nextcardview(request):
-    card = Card.objects.all()[random.randrange(1, len(Card.objects.all()), 1)]
-    return redirect(card.get_absolute_url())
-
-
-# 展示数据
+# 展示背诵数据
 @login_required
 def recitedatadisplay(request):
     # 按rank排序，后续改进
@@ -115,9 +124,21 @@ def recitedatadisplay(request):
     datas = [{'card': card, 'recitedata': card.recitedata.all()} for card in cards]
     return render(request,
                   'flashcards/recitedata.html',
-                  {'datas': datas})
+                  {'datas': datas}
+                  )
 
 
+# 单张卡片背诵数据
+def card_recitedata_view(request, card_id):
+    card = get_object_or_404(Card, id=card_id)
+    all_recitedata = card.recitedata.all()
+    return render(request,
+                  'flashcards/card_recitedata_detail.html',
+                  {'all_recitedata': all_recitedata
+                   })
+
+
+# 修改到此
 @login_required
 def search(request):
     cards = []
@@ -140,57 +161,19 @@ def search(request):
 
     if cd['query'] == '':
         form = SearchForm()
-
     return render(request, 'flashcards/search.html', {'cards': cards, 'searchvalue': cd['query'], 'form': form})
 
 
-# 首页
-@login_required
-def index(request):
-    cards = Card.objects.all()
-    form = SearchForm()
-    type_proportion = {
-        'cihui': len(Card.objects.filter(group__startswith='词汇')),
-        'duanyu': len(Card.objects.filter(group__startswith='短语')),
-        'bianxi': len(Card.objects.filter(group__startswith='辨析'))
-    }
-    # 获取当前用户的单词列表
-    wordlists = request.user.owner.all()
-    # 获取过去七天的背诵数据
-    now = timezone.now()
-    start = now - timedelta(days=7, hours=now.hour, minutes=now.minute, seconds=now.second)
-    recitedata = Recitedata.objects.filter(date__gt=start)
-    rank_count_by_day = []
-    for i in range(1, 8):
-        all_data = recitedata.filter(date__gt=start + timedelta(days=i), date__lt=start + timedelta(days=i + 1))
-        counter = collections.Counter([data.rank for data in all_data])
-        rank_count_by_day.append([counter[1], counter[2], counter[3], counter[4]])
-    rank_count_by_rank = []
-    for i in range(0, 4):
-        rank_count_by_rank.append([rank_day[i] for rank_day in rank_count_by_day])
-    # 仅返回有单词的tag
-    tags = filter(lambda tag: len(Card.objects.filter(tags__in=[tag])), Tag.objects.all())
-    return render(request, 'flashcards/anki.html',
-                  {'len': len(cards),
-                   'type_proportion': type_proportion,
-                   'lenlist': len(WordList.objects.all()),
-                   'form': form,
-                   'wordlists': wordlists,
-                   'tags': tags,
-                   'recitedata': rank_count_by_rank, },
-                  )
-
-
-# 删除背诵记录
+# 撤回：删除背诵记录
 @login_required
 def undo(request, card_id):
     # 需要撤回的卡片和需要删除背诵记录的卡是一张卡
-    card = Card.objects.filter(id=card_id)
-    card[0].recitedata.latest('date').delete()
-    return redirect(card[0].get_absolute_url())
+    card = get_object_or_404(Card, id=card_id)
+    card.recitedata.latest('date').delete()
+    return redirect(card.get_absolute_url())
 
 
-# 删除背诵记录
+# 列表的撤回：删除背诵记录
 @login_required
 def undo_list(request, list_id, progress):
     wordlist = get_object_or_404(WordList, id=list_id)
@@ -232,25 +215,6 @@ def dict_search(request):
     form = SearchForm(request.GET)
     if form.is_valid():
         cd = form.cleaned_data
-        # # 获取词汇排名
-        # # 加载mdx文件
-        # filename = "flashcards/static/dict/COCA/COCA Frequency 60000.mdx"
-        # headwords = [*MDX(filename)]  # 单词名列表
-        # items = [*MDX(filename).items()]  # 释义html源码列表
-        #
-        # # 查词，返回单词和html文件
-        #
-        # queryWord = cd['query']
-        #
-        # # print(headwords[120:123])
-        # html_result = ''
-        # try:
-        #     wordIndex = headwords.index(queryWord.encode())
-        #     word, html = items[wordIndex]
-        #     word, html_head = word.decode(), html.decode()
-        # except ValueError:
-        #     html_result = 'No Results!'
-
         # 查词，返回单词和html文件
         html_result = ''
         queryword = cd['query']
@@ -266,8 +230,7 @@ def dict_search(request):
 
     return render(request, 'flashcards/dict.html',
                   {'html_result': html_result, 'form': form, 'searchvalue': cd['query'],
-                   },
-                  )
+                   })
 
 
 @login_required
@@ -537,9 +500,12 @@ def settings_view(request):
     if request.POST:
         if "random_example" in request.POST and request.POST['random_example'] == 'on':
             settings.random_example = True
+            # 将其存入内存
+            cache.set('random_example', True, timeout=600)
             settings.save()
         else:
             settings.random_example = False
+            cache.set('random_example', False, timeout=600)
             settings.save()
 
     if request.POST['path'] == "/flashcards/settings/":
@@ -571,7 +537,6 @@ def dict_query(request):
 
 
 # get方式的字典请求
-@xframe_options_exempt
 def dict_query_get(request, query_word):
     re_filter = re.findall(r"[a-zA-Z]+", query_word)
     if len(re_filter) == 0:
@@ -584,8 +549,8 @@ def dict_query_get(request, query_word):
     for query_list_word in query_list:
         query_result = Dict.objects.filter(headword__startswith=query_list_word)
         if len(query_result) != 0:
-            # return JsonResponse({"query_word": query_list_word, 'html_result': query_result[0].item})
-            return render(request, 'flashcards/anki_ext.html', {"query_word": query_word, 'html_result': 'No Result!'})
+            return JsonResponse({"query_word": query_list_word, 'html_result': query_result[0].item})
+
     return JsonResponse({"query_word": query_word, 'html_result': 'No Result!'})
 
 
